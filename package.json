@@ -1,0 +1,31 @@
+{
+  "name": "ai-team-agent",
+  "version": "0.1.0",
+  "type": "module",
+  "description": "CEO/CTO style AI agent that delegates work to specialist subagents and connects to IM channels.",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/lxy-xx/ai-team.git"
+  },
+  "bugs": {
+    "url": "https://github.com/lxy-xx/ai-team/issues"
+  },
+  "homepage": "https://github.com/lxy-xx/ai-team#readme",
+  "engines": {
+    "node": ">=20"
+  },
+  "scripts": {
+    "start": "node src/index.js server",
+    "dev": "node --watch src/index.js server",
+    "once": "node src/index.js once",
+    "test": "node --test --test-concurrency=1"
+  },
+  "dependencies": {
+    "@larksuiteoapi/node-sdk": "^1.64.0",
+    "qrcode": "^1.5.4"
+  },
+  "overrides": {
+    "axios": "^1.17.0"
+  }
+}
