@@ -174,6 +174,104 @@ test("dashboard access state falls back to the default admin token", () => {
   );
 });
 
+test("one one smoke endpoint records setup readiness for dashboard refresh", async (t) => {
+  const dataDir = await fs.mkdtemp(path.join(os.tmpdir(), "ai-team-one-one-smoke-api-"));
+  const agent = {
+    role: "engineer",
+    name: "Ada",
+    title: "Coding Engineer",
+    prompt: "Build carefully.",
+    tools: [],
+    skills: [],
+    mcps: [],
+    modelProvider: { providerId: "codex", model: "gpt-5.5" }
+  };
+  const memory = {
+    async readLongTermFacts() { return []; },
+    async readLongTermPlaybooks() { return []; },
+    async readRecentSummary() { return ""; },
+    async readContextNeeds() { return []; },
+    async recordEvent(event) { return { id: "event_one_one_smoke", ...event, createdAt: "2026-06-14T00:00:00.000Z" }; }
+  };
+  const agentRuntime = {
+    agentConfigStore: {
+      async list() { return [agent]; }
+    },
+    async profileForRole(role) {
+      assert.equal(role, "engineer");
+      return agent;
+    },
+    storesForProfile() {
+      return { memory };
+    },
+    async resolveProviderSelection() {
+      return { providerId: "codex", runner: "mock", model: "gpt-5.5", provider: { id: "codex", runner: "mock" } };
+    },
+    async prepareTurn() {
+      return { role: "engineer", profile: agent, tools: [] };
+    },
+    async run() {
+      return {
+        finalText: "Ada is ready with codex gpt-5.5 and tools loaded.",
+        sessionId: "one-one:engineer",
+        trace: { traceId: "trace_one_one_smoke", provider: "codex", model: "gpt-5.5" }
+      };
+    }
+  };
+  const server = createServer({
+    config: {
+      dataDir,
+      adminToken: undefined,
+      runner: { type: "mock" },
+      provider: { id: "mock" }
+    },
+    engine: {
+      async readModel() {
+        return { projects: [], intents: [], tasks: [], runs: [], artifacts: [], sessions: [], feedback: [] };
+      }
+    },
+    agentRuntime,
+    agentConfigStore: {
+      async list() { return [agent]; }
+    },
+    routingStore: {
+      async list() { return []; },
+      async get() { return []; }
+    },
+    toolRegistry: {
+      list() { return []; }
+    },
+    providerConfigStore: {
+      async list() {
+        return {
+          defaultProviderId: "codex",
+          providers: [{ id: "codex", name: "Codex", enabled: true, defaultModel: "gpt-5.5" }]
+        };
+      }
+    }
+  });
+  t.after(() => server.close());
+  const baseUrl = await listen(server);
+
+  const smoke = await fetch(`${baseUrl}/ai-team/api/agents/engineer/one-one-smoke`, {
+    method: "POST",
+    headers: { "content-type": "application/json" },
+    body: JSON.stringify({ message: "smoke" })
+  });
+
+  assert.equal(smoke.status, 200);
+  const smokeBody = await readJson(smoke);
+  assert.equal(smokeBody.smoke.ok, true);
+  assert.equal(smokeBody.smoke.role, "engineer");
+
+  const dashboard = await readJson(await fetch(`${baseUrl}/ai-team/api/dashboard`, {
+    headers: { "x-ai-team-admin-token": "AI-team" }
+  }));
+  const item = dashboard.readiness.items.find((entry) => entry.id === "one_on_one_smoke");
+  assert.equal(item.status, "ready");
+  assert.match(item.reason, /direct turn completed/);
+});
+
 test("dashboard HTML redirects to login until token is supplied", async (t) => {
   const server = createServer({ config: { adminToken: "secret", runner: { type: "mock" } } });
   t.after(() => server.close());

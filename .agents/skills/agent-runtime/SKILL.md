@@ -11,7 +11,7 @@ AgentRuntime 是 Agent 真正开始工作的地方。CEO 渠道消息、TeamEngi
 
 一次 `AgentRuntime.run()` 大致做这些事：
 
-1. 用 Agent 名或 role 解析 profile；role 是稳定业务 ID，Agent 名只是显示名和配置目录默认值。默认 profile 只由 `default-agent-onboarding.js` 在传入 `OnboardingStateStore` 后一次性 seed，`OnboardingStateStore` 记录首次 seed marker，`AgentConfigStore.init()` 不自动创建默认团队，`AgentConfigStore.get()`/`getExisting()`/`update()` 也不创建缺失目录。Agent profile skills 只读写 `SKILL.md`，从 frontmatter `name`/`description` 和正文生成运行时 skill，不维护 `skill.json`。默认产品经理的任务图约束放在 `task-graph-contract` skill 和 `output.json`，默认 QA 的验收结构由 prompt 和 `output.json` 共同要求顶层 `verification_report.verdict`，默认 CEO 的阻塞诊断流程放在 `blocker-diagnosis` skill；不要把这些规则写进运行时代码。如果同一个 role 同时有多个 Agent 目录，`AgentConfigStore` 必须把它当成配置冲突报错，不按默认名或历史名折叠。
+1. 用 Agent 名或 role 解析 profile；role 是稳定业务 ID，Agent 名只是显示名和配置目录默认值。默认 profile 只由 `default-agent-onboarding.js` 在传入 `OnboardingStateStore` 后一次性 seed，`OnboardingStateStore` 记录首次 seed marker，`AgentConfigStore.init()` 不自动创建默认团队，`AgentConfigStore.get()`/`getExisting()`/`update()` 也不创建缺失目录。Agent profile skills 只读写 `agent-workspace/agents/<Agent>/.agents/skills/<skill>/SKILL.md`，从 frontmatter `name`/`description` 和正文生成运行时 skill，不维护 `skill.json`，也不使用 Agent 目录顶层 `skills/`。默认产品经理的任务图约束放在 `task-graph-contract` skill 和 `output.json`，默认 QA 的验收结构由 prompt 和 `output.json` 共同要求顶层 `verification_report.verdict`，默认 CEO 的阻塞诊断流程放在 `blocker-diagnosis` skill；不要把这些规则写进运行时代码。如果同一个 role 同时有多个 Agent 目录，`AgentConfigStore` 必须把它当成配置冲突报错，不按默认名或历史名折叠。
 2. 打开该 Agent 的 memory、session、trace stores。
 3. 读取 long-term facts、open context needs、recent summary。
 4. 由 `AgentSessionFactory` 创建 Session fork seed 和当前 turn material；Session store 负责渲染 Provider 消息和压缩 replay prefix。

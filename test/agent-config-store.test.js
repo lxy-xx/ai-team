@@ -232,8 +232,13 @@ test("default agent onboarding seeds profiles once from source defaults", async 
   assert.match(engineer.skills[0].content, /logMode=full/);
   assert.match(engineer.skills[0].content, /explicit project workspace/);
   assert.match(engineer.skills[0].content, /do not guess from `pwd`/);
+  assert.equal(
+    await fs.readFile(path.join(agentsDir, "Ada", ".agents", "skills", "coding-agent-delegation", "SKILL.md"), "utf8")
+      .then((text) => text.includes("coding-agent-delegation")),
+    true
+  );
   await assert.rejects(
-    () => fs.access(path.join(agentsDir, "Ada", "skills", "coding-agent-delegation", "skill.json")),
+    () => fs.access(path.join(agentsDir, "Ada", "skills")),
     { code: "ENOENT" }
   );
   assert.equal(engineer.output.artifactKind, "implementation_report");
@@ -254,8 +259,13 @@ test("default agent onboarding seeds profiles once from source defaults", async 
   assert.equal(productManager.skills[0].id, "task-graph-contract");
   assert.match(productManager.skills[0].content, /Do not wrap the graph inside `agent_output`/);
   assert.match(productManager.skills[0].content, /"kind": "task_graph"/);
+  assert.equal(
+    await fs.readFile(path.join(agentsDir, "Darwin", ".agents", "skills", "task-graph-contract", "SKILL.md"), "utf8")
+      .then((text) => text.includes("task-graph-contract")),
+    true
+  );
   await assert.rejects(
-    () => fs.access(path.join(agentsDir, "Darwin", "skills", "task-graph-contract", "skill.json")),
+    () => fs.access(path.join(agentsDir, "Darwin", "skills")),
     { code: "ENOENT" }
   );
 
@@ -264,8 +274,13 @@ test("default agent onboarding seeds profiles once from source defaults", async 
   assert.equal(ceo.skills[0].id, "blocker-diagnosis");
   assert.match(ceo.skills[0].content, /Read only/);
   assert.match(ceo.skills[0].content, /AI_TEAM_CONTROL_WORKSPACE/);
+  assert.equal(
+    await fs.readFile(path.join(agentsDir, "Franklin", ".agents", "skills", "blocker-diagnosis", "SKILL.md"), "utf8")
+      .then((text) => text.includes("blocker-diagnosis")),
+    true
+  );
   await assert.rejects(
-    () => fs.access(path.join(agentsDir, "Franklin", "skills", "blocker-diagnosis", "skill.json")),
+    () => fs.access(path.join(agentsDir, "Franklin", "skills")),
     { code: "ENOENT" }
   );
 
@@ -428,9 +443,9 @@ test("AgentConfigStore removes selected skills without rewriting remaining skill
     ]
   });
 
-  const keptSkill = path.join(agentsDir, "Ada", "skills", "deep-review", "SKILL.md");
-  const keptExtra = path.join(agentsDir, "Ada", "skills", "deep-review", "examples.md");
-  const removedSkill = path.join(agentsDir, "Ada", "skills", "risk-review", "SKILL.md");
+  const keptSkill = path.join(agentsDir, "Ada", ".agents", "skills", "deep-review", "SKILL.md");
+  const keptExtra = path.join(agentsDir, "Ada", ".agents", "skills", "deep-review", "examples.md");
+  const removedSkill = path.join(agentsDir, "Ada", ".agents", "skills", "risk-review", "SKILL.md");
   const originalMarkdown = "---\nname: deep-review\ndescription: Keep the real review body.\n---\n\n# Deep Review\n\nUNIQUE_RUNTIME_SKILL_BODY\n";
   await fs.writeFile(keptSkill, originalMarkdown);
   await fs.writeFile(keptExtra, "important extra file");
@@ -628,7 +643,7 @@ test("AgentConfigStore executes restricted npx skills commands in the agent fold
   let call;
   const commandRunner = async (input) => {
     call = input;
-    const skillDir = path.join(input.cwd, "skills", "regression-risk");
+    const skillDir = path.join(input.cwd, ".agents", "skills", "regression-risk");
     await fs.mkdir(skillDir, { recursive: true });
     await fs.writeFile(skillDir + "/SKILL.md", "---\nname: regression-risk\ndescription: Prioritize regressions.\n---\n\n# Regression Risk\n");
     return { status: 0, stdout: "installed", stderr: "" };
@@ -641,8 +656,12 @@ test("AgentConfigStore executes restricted npx skills commands in the agent fold
   assert.equal(call.command, "npx");
   assert.deepEqual(call.args, ["skills", "install", "regression-risk"]);
   assert.equal(call.cwd, path.join(agentsDir, "Turing"));
-  assert.equal(call.env.AI_TEAM_SKILLS_DIR, path.join(agentsDir, "Turing", "skills"));
+  assert.equal(call.env.AI_TEAM_SKILLS_DIR, path.join(agentsDir, "Turing", ".agents", "skills"));
   assert.deepEqual(updated.skills.map((skill) => skill.id), ["regression-risk"]);
+  await assert.rejects(
+    () => fs.access(path.join(agentsDir, "Turing", "skills")),
+    { code: "ENOENT" }
+  );
   await assert.rejects(
     () => store.installSkillFromCommand("qa", "npx cowsay regression-risk"),
     /npx skills/
@@ -883,7 +902,7 @@ test("AgentRuntime uses configured agent profile in prepared turns", async () =>
     tools: ["memory.search", "Bash", "sentry.capture_event"]
   });
   await fs.writeFile(
-    path.join(agentsDir, "Turing", "skills", "regression-risk", "SKILL.md"),
+    path.join(agentsDir, "Turing", ".agents", "skills", "regression-risk", "SKILL.md"),
     "---\nname: regression-risk\ndescription: Prioritize regressions.\n---\n\n# Regression Risk\n\nUNIQUE_RUNTIME_SKILL_BODY\n"
   );
   const runtime = new AgentRuntime({ memory, toolRegistry, agentConfigStore });

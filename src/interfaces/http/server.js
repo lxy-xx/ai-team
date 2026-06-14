@@ -15,6 +15,7 @@ import {
   apiResourcePath,
   consoleResourcePath
 } from "../../platform/http-paths.js";
+import { SetupReadinessStore } from "../../platform/setup-readiness-store.js";
 
 const DASHBOARD_AUTH_COOKIE = "ai_team_admin_token";
 
@@ -802,17 +803,21 @@ export function createHttpServer({
   provider
 }) {
   const feishu = channels.get("feishu");
-  const dashboardData = (request) => buildDashboardData({
-    config: dashboardConfigForRequest(config, request),
-    channelConfigStore,
-    engine,
-    memory,
-    agentConfigStore,
-    routingStore,
-    toolRegistry,
-    providerConfigStore,
-    codingAgentLauncherStore
-  });
+  const setupReadinessStore = new SetupReadinessStore({ dataDir: config.dataDir });
+  const dashboardData = async (request) => {
+    const demoReadiness = await setupReadinessStore.read();
+    return buildDashboardData({
+      config: { ...dashboardConfigForRequest(config, request), demoReadiness },
+      channelConfigStore,
+      engine,
+      memory,
+      agentConfigStore,
+      routingStore,
+      toolRegistry,
+      providerConfigStore,
+      codingAgentLauncherStore
+    });
+  };
   const dashboardWebSocketHub = createDashboardWebSocketHub({ buildSnapshot: dashboardData, logger });
 
   const server = http.createServer(async (request, response) => {
@@ -1075,9 +1080,39 @@ export function createHttpServer({
       const agentConfigMatch = apiPath?.match(/^\/agents\/config\/([^/]+)$/);
       const agentSkillMatch = apiPath?.match(/^\/agents\/config\/([^/]+)\/skills$/);
       const agentMcpToolSyncMatch = apiPath?.match(/^\/agents\/config\/([^/]+)\/mcps\/([^/]+)\/tools\/sync$/);
+      const agentOneOneSmokeMatch = apiPath?.match(/^\/agents\/([^/]+)\/one-one-smoke$/);
       const agentOneOneMatch = apiPath?.match(/^\/agents\/([^/]+)\/one-one$/);
       const agentMemoryMatch = apiPath?.match(/^\/agents\/([^/]+)\/memory$/);
       const agentContextNeedResolveMatch = apiPath?.match(/^\/agents\/([^/]+)\/context-needs\/([^/]+)\/resolve$/);
+      if (request.method === "POST" && agentOneOneSmokeMatch) {
+        requireAdmin(request, config);
+        const role = decodeURIComponent(agentOneOneSmokeMatch[1]);
+        const body = JSON.parse(await readBody(request) || "{}");
+        const reply = await runAgentOneOnOne({
+          role,
+          message: body.message || "Smoke check for demo readiness: reply with one short paragraph confirming your persona, selected model provider/model, and whether your tools are loaded. Do not call external channels.",
+          mode: "chat",
+          linkedContext: {},
+          history: [],
+          agentRuntime,
+          provider,
+          toolExecutor,
+          config,
+          logger
+        });
+        const smoke = await setupReadinessStore.recordOneOnOneSmoke({
+          ok: true,
+          role,
+          provider: reply.provider,
+          model: reply.model,
+          sessionId: reply.sessionId,
+          traceId: reply.traceId,
+          message: `${reply.role || role} direct turn completed.`,
+          checkedAt: new Date().toISOString()
+        });
+        send(response, 200, { smoke, reply });
+        return;
+      }
       if (request.method === "POST" && agentOneOneMatch) {
         requireAdmin(request, config);
         const role = decodeURIComponent(agentOneOneMatch[1]);

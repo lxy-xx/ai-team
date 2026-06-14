@@ -678,7 +678,7 @@ test("ToolExecutor skill tool returns installed Skill markdown by name", async (
       skills: [{
         id: "patching",
         description: "Patch code safely.",
-        path: "/tmp/Ada/skills/patching/SKILL.md",
+        path: "/tmp/Ada/.agents/skills/patching/SKILL.md",
         content: "# Patching\n\nUse small, reviewed patches."
       }]
     }

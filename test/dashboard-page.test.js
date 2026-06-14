@@ -333,6 +333,7 @@ test("dashboard Settings renders setup readiness panel", () => {
   assert.match(html, /data-readiness-action/);
   assert.match(html, /provider:codex/);
   assert.match(html, /smoke:engineer/);
+  assert.match(html, /\/ai-team\/api\/agents\/"\s*\+\s*encodeURIComponent\(value\)\s*\+\s*"\/one-one-smoke/);
   assert.match(html, /const lastActionResult = sanitizeReadinessResult/);
   assert.match(html, /await refresh\(\);\n\s*state\.data\.readiness = state\.data\.readiness \|\| \{\};\n\s*state\.data\.readiness\.lastActionResult = lastActionResult/);
   assert.match(html, /const previousReadinessResult = state\.data\.readiness\?\.lastActionResult/);

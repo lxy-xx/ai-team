@@ -473,9 +473,8 @@ export class AgentConfigStore {
       toolsJson: path.join(agentDir, "tools.json"),
       outputJson: path.join(agentDir, "output.json"),
       dotAgentsDir,
-      legacySkillsDir: path.join(dotAgentsDir, "skills"),
       legacyMcpDir: path.join(dotAgentsDir, "mcp"),
-      skillsDir: path.join(agentDir, "skills"),
+      skillsDir: path.join(dotAgentsDir, "skills"),
       mcpDir: path.join(agentDir, "mcp"),
       memoryDir,
       sessionsDir: path.join(memoryDir, "sessions"),
@@ -851,7 +850,6 @@ export class AgentConfigStore {
   }
 
   async migrateLegacyCapabilities(paths) {
-    await copyLegacyDirectory(paths.legacySkillsDir, paths.skillsDir);
     await copyLegacyDirectory(paths.legacyMcpDir, paths.mcpDir);
   }
 

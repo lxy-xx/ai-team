@@ -897,11 +897,30 @@ const OVERVIEW_READINESS_JS = `function readinessStatusLabel(status) {
           const [kind, value] = String(button.dataset.readinessAction || "").split(":");
           if (!kind || !value) return;
           if (kind === "smoke") {
-            openAgentChat(value);
-            const input = document.querySelector(".one-one-input");
-            if (input) {
-              input.value = defaultSmokePrompt(value);
-              input.focus();
+            try {
+              button.disabled = true;
+              button.textContent = actionLabel("Running...");
+              const smoke = await postJson("/ai-team/api/agents/" + encodeURIComponent(value) + "/one-one-smoke", {
+                message: defaultSmokePrompt(value)
+              }, true);
+              const lastActionResult = sanitizeReadinessResult({
+                action: "smoke:" + value,
+                checkedAt: new Date().toISOString(),
+                result: smoke
+              });
+              await refresh();
+              state.data.readiness = state.data.readiness || {};
+              state.data.readiness.lastActionResult = lastActionResult;
+              renderOverviewReadiness();
+            } catch (error) {
+              state.data.readiness.lastActionResult = sanitizeReadinessResult({
+                action: "smoke:" + value,
+                checkedAt: new Date().toISOString(),
+                error: error.message
+              });
+              renderOverviewReadiness();
+            } finally {
+              button.disabled = false;
             }
             return;
           }
